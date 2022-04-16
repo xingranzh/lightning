@@ -2273,6 +2273,18 @@ class Trainer(
         return self._weights_save_path
 
     @property
+    def callbacks(self) -> List[Callback]:
+        return self._callback_connector.callbacks
+
+    @callbacks.setter
+    def callbacks(self, callbacks: List[Callback]) -> None:
+        rank_zero_deprecation(
+            "Setting `Trainer.callbacks` is deprecated in v1.7 and will become read-only from v1.9. Pass the callbacks"
+            " list directly to the Trainer as `Trainer(callbacks=[...])`."
+        )
+        self._callback_connector.callbacks = callbacks
+
+    @property
     def early_stopping_callback(self) -> Optional[EarlyStopping]:
         """The first :class:`~pytorch_lightning.callbacks.early_stopping.EarlyStopping` callback in the
         Trainer.callbacks list, or ``None`` if it doesn't exist."""

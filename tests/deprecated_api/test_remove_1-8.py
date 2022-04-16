@@ -1110,7 +1110,7 @@ def test_v1_8_0_callback_on_save_checkpoint_hook(tmpdir):
     ):
         trainer.save_checkpoint(tmpdir + "/path.ckpt")
 
-    trainer.callbacks = [TestCallbackSaveHookOverride()]
+    trainer._callback_connector.callbacks = [TestCallbackSaveHookOverride()]
     trainer.save_checkpoint(tmpdir + "/pathok.ckpt")
 
 
