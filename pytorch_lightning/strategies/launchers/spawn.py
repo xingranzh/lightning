@@ -13,8 +13,9 @@
 # limitations under the License.
 import os
 from collections import UserList
+from dataclasses import dataclass, field
 from multiprocessing.queues import SimpleQueue
-from typing import Any, Callable, NamedTuple, Optional
+from typing import Any, Callable, NamedTuple, Optional, Dict
 
 import numpy as np
 import torch
@@ -26,7 +27,8 @@ from pytorch_lightning.strategies.strategy import Strategy
 from pytorch_lightning.trainer.states import TrainerFn, TrainerState
 from pytorch_lightning.utilities.apply_func import apply_to_collection, move_data_to_device
 from pytorch_lightning.utilities.model_helpers import is_overridden
-from pytorch_lightning.utilities.rank_zero import rank_zero_debug
+from pytorch_lightning.utilities.rank_zero import rank_zero_debug, rank_zero_only, _get_rank
+from pytorch_lightning.utilities.seed import reset_seed, _set_rng_states, _collect_rng_states, seed_everything
 from pytorch_lightning.utilities.types import _PATH
 
 
@@ -77,7 +79,7 @@ class _SpawnLauncher(_Launcher):
         return_queue = context.SimpleQueue()
         mp.spawn(
             self._wrapping_function,
-            args=(trainer, function, args, kwargs, return_queue),
+            args=(trainer, function, args, kwargs, GlobalSnapshot(), return_queue),
             nprocs=self._strategy.num_processes,
             start_method=self._start_method,
         )
@@ -96,8 +98,10 @@ class _SpawnLauncher(_Launcher):
         args: Any,
         kwargs: Any,
         return_queue: SimpleQueue,
+        snapshot: "GlobalSnapshot",
     ) -> None:
-        self._strategy._worker_setup(process_idx)
+        snapshot.apply()
+        self._strategy._worker_setup(process_idx)  # TODO: needed?
         results = function(*args, **kwargs)
 
         if trainer is not None:
@@ -198,3 +202,29 @@ class _SpawnOutput(NamedTuple):
     trainer_state: TrainerState
     trainer_results: Any
     extra: _FakeQueue
+
+
+@dataclass(frozen=True)
+class GlobalSnapshot:
+    use_deterministic_algorithms: bool = field(default_factory=torch.are_deterministic_algorithms_enabled)
+    cudnn_benchmark: bool = field(default_factory=(lambda: torch.backends.cudnn.benchmark))
+    rng_states: Dict[str, Any] = field(default_factory=_collect_rng_states)
+
+    def apply(self) -> None:
+        torch.use_deterministic_algorithms(self.use_deterministic_algorithms)
+        torch.backends.cudnn.benchmark = self.cudnn_benchmark
+        _set_rng_states(self.rng_states)
+
+
+def foo(i, store):
+    print(store)
+    store.apply()
+    print(torch.initial_seed())
+    print(torch.are_deterministic_algorithms_enabled())
+
+
+if __name__ == "__main__":
+    torch.use_deterministic_algorithms(True)
+    seed_everything(123)
+    store = GlobalSnapshot()
+    mp.spawn(foo, args=(store, ), nprocs=2)
