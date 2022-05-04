@@ -22,6 +22,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.plugins.environments.cluster_environment import ClusterEnvironment
 from pytorch_lightning.plugins.io.checkpoint_plugin import CheckpointIO
 from pytorch_lightning.plugins.precision import PrecisionPlugin
+from pytorch_lightning.plugins.precision.fully_sharded_native_amp import FullyShardedNativeMixedPrecisionPlugin
 from pytorch_lightning.strategies.parallel import ParallelStrategy
 from pytorch_lightning.strategies.strategy import TBroadcast
 from pytorch_lightning.trainer.states import TrainerFn
@@ -34,7 +35,7 @@ from pytorch_lightning.utilities.distributed import (
 from pytorch_lightning.utilities.distributed import group as _group
 from pytorch_lightning.utilities.distributed import init_dist_connection, ReduceOp, sync_ddp_if_available
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
-from pytorch_lightning.utilities.imports import _TORCH_GREATER_EQUAL_1_11
+from pytorch_lightning.utilities.imports import _TORCH_GREATER_EQUAL_1_11, _TORCH_GREATER_EQUAL_1_12_NIGHTLY
 from pytorch_lightning.utilities.optimizer import optimizers_to_device
 from pytorch_lightning.utilities.seed import reset_seed
 
@@ -45,6 +46,10 @@ if _TORCH_GREATER_EQUAL_1_11:
         FullyShardedDataParallel,
     )
     from torch.distributed.fsdp.wrap import enable_wrap
+
+MixedPrecision = None
+if _TORCH_GREATER_EQUAL_1_12_NIGHTLY:
+    from torch.distributed.fsdp.fully_sharded_data_parallel import MixedPrecision
 
 
 log = logging.getLogger(__name__)
@@ -65,6 +70,7 @@ class DDPFullyShardedNativeStrategy(ParallelStrategy):
         process_group_backend: Optional[str] = None,
         cpu_offload=None,
         backward_prefetch=None,
+        mixed_precision=None,
     ) -> None:
         """Strategy for Fully Sharded Data Parallel provided by torch.Distributed.
 
@@ -96,6 +102,10 @@ class DDPFullyShardedNativeStrategy(ParallelStrategy):
                 the near future. It allows users to enable two different backward_prefetch
                 algorithms to help backward communication and computation overlapping.
                 Pros and cons of each algorithm is explained in the class ``BackwardPrefetch``.
+            mixed_precision: (Optional[MixedPrecision]):
+                Mixed Precision config. By default, Lightning will enable FP16 if ``precision=16`
+                or BF16 if ``precision=bf16`` unless a config is passed in.
+                This is only available in PyTorch 1.12 and later.
         """
         if not _TORCH_GREATER_EQUAL_1_11:
             raise MisconfigurationException("DDPFullyShardedNativeStrategy is supported from pytorch v1.11.0 onwards.")
@@ -112,6 +122,7 @@ class DDPFullyShardedNativeStrategy(ParallelStrategy):
         self._process_group_backend: Optional[str] = process_group_backend
         self.cpu_offload: Optional[CPUOffload] = cpu_offload
         self.backward_prefetch: Optional[BackwardPrefetch] = backward_prefetch
+        self._mixed_precision: Optional[MixedPrecision] = mixed_precision
 
     @property
     def root_device(self) -> torch.device:
@@ -127,6 +138,15 @@ class DDPFullyShardedNativeStrategy(ParallelStrategy):
     @property
     def process_group_backend(self) -> Optional[str]:
         return self._process_group_backend
+
+    @property
+    def _mixed_precision_config(self) -> Optional[MixedPrecision]:
+        if self._mixed_precision:
+            return self._mixed_precision
+        plugin = self.precision_plugin
+        if isinstance(plugin, FullyShardedNativeMixedPrecisionPlugin):
+            return plugin.mixed_precision
+        return self._mixed_precision
 
     def setup_environment(self) -> None:
         reset_seed()
@@ -168,12 +188,17 @@ class DDPFullyShardedNativeStrategy(ParallelStrategy):
     def model_sharded_context(self) -> Generator:
         log.detail(f"{self.__class__.__name__}: entered model_sharded_context.")
 
-        with enable_wrap(
+        kwargs = dict(
             wrapper_cls=FullyShardedDataParallel,
             process_group=self.process_group,
             cpu_offload=self.cpu_offload,
             backward_prefetch=self.backward_prefetch,
-        ):
+        )
+
+        if _TORCH_GREATER_EQUAL_1_12_NIGHTLY:
+            kwargs["mixed_precision"] = self._mixed_precision_config
+
+        with enable_wrap(**kwargs):
             yield
 
     def barrier(self, name: Optional[str] = None) -> None:

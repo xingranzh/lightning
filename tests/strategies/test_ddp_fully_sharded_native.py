@@ -7,6 +7,7 @@ import torch
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.plugins import FullyShardedNativeMixedPrecisionPlugin
 from pytorch_lightning.strategies import DDPFullyShardedNativeStrategy
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
 from pytorch_lightning.utilities.imports import _TORCH_GREATER_EQUAL_1_11
@@ -16,6 +17,16 @@ from tests.helpers.runif import RunIf
 if _TORCH_GREATER_EQUAL_1_11:
     from torch.distributed.fsdp.fully_sharded_data_parallel import FullyShardedDataParallel
     from torch.distributed.fsdp.wrap import wrap
+
+
+@RunIf(min_torch="1.12dev")
+@pytest.mark.parametrize("precision, expected", [(16, torch.float16), ("bf16", torch.bfloat16)])
+def test_precision_plugin_config(precision, expected):
+    plugin = FullyShardedNativeMixedPrecisionPlugin(precision=precision, device="cuda")
+    config = plugin.mixed_precision
+    assert config.param_dtype == expected
+    assert config.buffer_dtype == expected
+    assert config.reduce_dtype == expected
 
 
 @RunIf(min_torch="1.11")
