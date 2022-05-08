@@ -170,7 +170,9 @@ class LightningLite(ABC):
             model = self._move_model_to_device(model=model, optimizers=list(optimizers))
 
         # Let accelerator/plugin wrap and connect the models and optimizers
+        print("setting up model and opt")
         model, optimizers = self._strategy._setup_model_and_optimizers(model, list(optimizers))
+        print("setting up lite module")
         model = _LiteModule(model, self._precision_plugin, original_module=original_model)
         optimizers = [_LiteOptimizer(optimizer=optimizer, strategy=self._strategy) for optimizer in optimizers]
         self._models_setup += 1
