@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
 from typing import Any, Callable, Dict, Generator, Iterator, Optional, Union
 
 import torch
@@ -124,10 +125,12 @@ class _LiteModule(DeviceDtypeModuleMixin):
             # __getattr__ gets called as a last resort if the attribute does not exist
             # call nn.Module's implementation first
             print("here getattr")
+            sys.exit()
             return super().__getattr__(item)
         except AttributeError:
             # If the attribute is not available on the _LiteModule wrapper, redirect to the wrapped nn.Module
             print("here getattr orig")
+            sys.exit()
             return getattr(self._original_module, item)
 
 
