@@ -122,7 +122,7 @@ class _LiteModule(DeviceDtypeModuleMixin):
         # except AttributeError:
         #     # If the attribute is not available on the _LiteModule wrapper, redirect to the wrapped nn.Module
         # try:
-        original_module = self._original_module
+        original_module = super().__getattr__("_original_module")
         return getattr(original_module, item)
         # except AttributeError:
         #     return super().__getattr__(item)
