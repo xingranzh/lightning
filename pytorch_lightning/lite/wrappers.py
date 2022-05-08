@@ -115,17 +115,17 @@ class _LiteModule(DeviceDtypeModuleMixin):
         return output
 
     def __getattr__(self, item: Any) -> Any:
+        # try:
+        #     # __getattr__ gets called as a last resort if the attribute does not exist
+        #     # call nn.Module's implementation first
+        #     return super().__getattr__(item)
+        # except AttributeError:
+        #     # If the attribute is not available on the _LiteModule wrapper, redirect to the wrapped nn.Module
         try:
-            # __getattr__ gets called as a last resort if the attribute does not exist
-            # call nn.Module's implementation first
-            return super().__getattr__(item)
+            original_module = getattr(self, "_original_module")
+            return getattr(original_module, item)
         except AttributeError:
-            # If the attribute is not available on the _LiteModule wrapper, redirect to the wrapped nn.Module
-            try:
-                original_module = getattr(self, "_original_module")
-                return getattr(original_module, item)
-            except AttributeError:
-                return super().__getattr__(item)
+            return super().__getattr__(item)
 
 
 class _LiteDataLoader:
