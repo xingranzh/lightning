@@ -40,6 +40,7 @@ def test_lite_module_wraps():
 
 def test_lite_module_attribute_lookup():
     """Test that attribute lookup passes through to the original model when possible."""
+
     class OriginalModule(torch.nn.Module):
         def __init__(self):
             super().__init__()
