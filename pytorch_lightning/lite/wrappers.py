@@ -82,14 +82,14 @@ class _LiteModule(DeviceDtypeModuleMixin):
                 on this wrapper should pass through to the original module.
         """
         print("entering init")
+        print("entering super init")
+        super().__init__()
+        print("exiting super init")
         self._forward_module = forward_module
         print("forw")
         self._original_module = original_module or forward_module
         print("org")
         self._precision_plugin = precision_plugin
-        print("entering super init")
-        super().__init__()
-        print("exiting super init")
 
     @property
     def module(self) -> nn.Module:
