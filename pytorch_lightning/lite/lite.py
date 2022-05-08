@@ -174,6 +174,7 @@ class LightningLite(ABC):
         model, optimizers = self._strategy._setup_model_and_optimizers(model, list(optimizers))
         print("setting up lite module")
         model = _LiteModule(model, self._precision_plugin, original_module=original_model)
+        print("setting up lite optimizer")
         optimizers = [_LiteOptimizer(optimizer=optimizer, strategy=self._strategy) for optimizer in optimizers]
         self._models_setup += 1
         if optimizers:

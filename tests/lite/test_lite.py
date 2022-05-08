@@ -401,7 +401,7 @@ def test_deepspeed_multiple_models():
             optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
             print("start")
             model, optimizer = self.setup(model, optimizer)
-            state_dict = deepcopy(model.state_dict())
+            #state_dict = deepcopy(model.state_dict())
             print("end")
             # for _ in range(2):
             #     optimizer.zero_grad()
