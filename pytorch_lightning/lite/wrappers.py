@@ -80,10 +80,11 @@ class _LiteModule(DeviceDtypeModuleMixin):
                 :meth:`pytorch_lightning.lite.lite.LightningLite.setup` method. This is needed when attribute lookup
                 on this wrapper should pass through to the original module.
         """
-        super().__init__()
+
         self._forward_module = forward_module
         self._original_module = original_module or forward_module
         self._precision_plugin = precision_plugin
+        super().__init__()
 
     @property
     def module(self) -> nn.Module:
