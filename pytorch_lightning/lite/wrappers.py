@@ -125,7 +125,6 @@ class _LiteModule(DeviceDtypeModuleMixin):
             # __getattr__ gets called as a last resort if the attribute does not exist
             # call nn.Module's implementation first
             print("here getattr")
-            sys.exit()
             return super().__getattr__(item)
         except AttributeError:
             # If the attribute is not available on the _LiteModule wrapper, redirect to the wrapped nn.Module
