@@ -399,18 +399,19 @@ def test_deepspeed_multiple_models():
         def run(self):
             model = BoringModel()
             optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
+            print("start")
             model, optimizer = self.setup(model, optimizer)
             state_dict = deepcopy(model.state_dict())
-
-            for _ in range(2):
-                optimizer.zero_grad()
-                x = model(torch.randn(1, 32).to(self.device))
-                loss = x.sum()
-                self.backward(loss, model=model)
-                optimizer.step()
-
-            for mw_b, mw_a in zip(state_dict.values(), model.state_dict().values()):
-                assert not torch.equal(mw_b, mw_a)
+            print("end")
+            # for _ in range(2):
+            #     optimizer.zero_grad()
+            #     x = model(torch.randn(1, 32).to(self.device))
+            #     loss = x.sum()
+            #     self.backward(loss, model=model)
+            #     optimizer.step()
+            #
+            # for mw_b, mw_a in zip(state_dict.values(), model.state_dict().values()):
+            #     assert not torch.equal(mw_b, mw_a)
 
             # self.seed_everything(42)
             # model_1 = BoringModel()
