@@ -412,48 +412,48 @@ def test_deepspeed_multiple_models():
             for mw_b, mw_a in zip(state_dict.values(), model.state_dict().values()):
                 assert not torch.equal(mw_b, mw_a)
 
-            self.seed_everything(42)
-            model_1 = BoringModel()
-            optimizer_1 = torch.optim.SGD(model_1.parameters(), lr=0.0001)
-
-            self.seed_everything(42)
-            model_2 = BoringModel()
-            optimizer_2 = torch.optim.SGD(model_2.parameters(), lr=0.0001)
-
-            for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
-                assert torch.equal(mw_1, mw_2)
-
-            model_1, optimizer_1 = self.setup(model_1, optimizer_1)
-            model_2, optimizer_2 = self.setup(model_2, optimizer_2)
-
-            self.seed_everything(42)
-            data_list = []
-            for _ in range(2):
-                optimizer_1.zero_grad()
-                data = torch.randn(1, 32).to(self.device)
-                data_list.append(data)
-                x = model_1(data)
-                loss = x.sum()
-                self.backward(loss, model=model_1)
-                optimizer_1.step()
-
-            for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
-                assert not torch.equal(mw_1, mw_2)
-
-            for data in data_list:
-                optimizer_2.zero_grad()
-                x = model_2(data)
-                loss = x.sum()
-                self.backward(loss, model=model_2)
-                optimizer_2.step()
-
-            for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
-                assert torch.equal(mw_1, mw_2)
-
-            # Verify collectives works as expected
-            ranks = self.all_gather(torch.tensor([self.local_rank]).to(self.device))
-            assert torch.equal(ranks.cpu(), torch.tensor([[0], [1]]))
-            assert self.broadcast(True)
-            assert self.is_global_zero == (self.local_rank == 0)
+            # self.seed_everything(42)
+            # model_1 = BoringModel()
+            # optimizer_1 = torch.optim.SGD(model_1.parameters(), lr=0.0001)
+            #
+            # self.seed_everything(42)
+            # model_2 = BoringModel()
+            # optimizer_2 = torch.optim.SGD(model_2.parameters(), lr=0.0001)
+            #
+            # for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
+            #     assert torch.equal(mw_1, mw_2)
+            #
+            # model_1, optimizer_1 = self.setup(model_1, optimizer_1)
+            # model_2, optimizer_2 = self.setup(model_2, optimizer_2)
+            #
+            # self.seed_everything(42)
+            # data_list = []
+            # for _ in range(2):
+            #     optimizer_1.zero_grad()
+            #     data = torch.randn(1, 32).to(self.device)
+            #     data_list.append(data)
+            #     x = model_1(data)
+            #     loss = x.sum()
+            #     self.backward(loss, model=model_1)
+            #     optimizer_1.step()
+            #
+            # for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
+            #     assert not torch.equal(mw_1, mw_2)
+            #
+            # for data in data_list:
+            #     optimizer_2.zero_grad()
+            #     x = model_2(data)
+            #     loss = x.sum()
+            #     self.backward(loss, model=model_2)
+            #     optimizer_2.step()
+            #
+            # for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
+            #     assert torch.equal(mw_1, mw_2)
+            #
+            # # Verify collectives works as expected
+            # ranks = self.all_gather(torch.tensor([self.local_rank]).to(self.device))
+            # assert torch.equal(ranks.cpu(), torch.tensor([[0], [1]]))
+            # assert self.broadcast(True)
+            # assert self.is_global_zero == (self.local_rank == 0)
 
     Lite(strategy=DeepSpeedStrategy(stage=3, logging_batch_size_per_gpu=1), devices=2, accelerator="gpu").run()
