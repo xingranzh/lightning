@@ -84,7 +84,9 @@ class _LiteModule(DeviceDtypeModuleMixin):
         self._forward_module = forward_module
         self._original_module = original_module or forward_module
         self._precision_plugin = precision_plugin
+        print("entering super init")
         super().__init__()
+        print("exiting super init")
 
     @property
     def module(self) -> nn.Module:
