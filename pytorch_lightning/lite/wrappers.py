@@ -130,7 +130,7 @@ class _LiteModule(DeviceDtypeModuleMixin):
             # If the attribute is not available on the _LiteModule wrapper, redirect to the wrapped nn.Module
             print("here getattr orig")
 
-            return getattr(super().__getattr__("_original_module"), item)
+            return getattr(getattr(self, "_original_module"), item)
 
 
 class _LiteDataLoader:
