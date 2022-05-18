@@ -1,9 +1,10 @@
-from typing import Tuple
 import gc
-import time
-import os
 import logging
+import os
+import random
+import time
 import urllib
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -260,42 +261,6 @@ def _hook_memory():
     return used_memory
 
 
-def measure_loops(cls_model: LightningModule, kind: str, num_epochs: int = 10):
-    """Returns an array with the last loss from each epoch for each run.
-
-    Args:
-        cls_model: LightingModule to benchmark with.
-        kind: "PT Lightning" or "Vanilla PT".
-        num_epochs: number of epochs.
-    """
-    hist_losses = []
-    hist_durations = []
-    hist_memory = []
-
-    device_type = "cuda" if torch.cuda.is_available() else "cpu"
-    torch.backends.cudnn.deterministic = True
-
-    gc.collect()
-    if device_type == "cuda":
-        torch.cuda.empty_cache()
-        torch.cuda.reset_accumulated_memory_stats()
-        torch.cuda.reset_peak_memory_stats()
-    time.sleep(1)
-
-    time_start = time.perf_counter()
-
-    _loop = lightning_loop if kind == "PT Lightning" else vanilla_loop
-    final_loss, used_memory = _loop(cls_model, device_type=device_type, num_epochs=num_epochs)
-
-    time_end = time.perf_counter()
-
-    hist_losses.append(final_loss)
-    hist_durations.append(time_end - time_start)
-    hist_memory.append(used_memory)
-
-    return {"losses": hist_losses, "durations": hist_durations, "memory": hist_memory}
-
-
 def vanilla_loop(cls_model, device_type: str = "cuda", num_epochs=10):
     device = torch.device(device_type)
     seed_everything(123)
@@ -337,14 +302,51 @@ def lightning_loop(cls_model, device_type: str = "cuda", num_epochs=10):
     return trainer.fit_loop.running_loss.last().item(), _hook_memory()
 
 
+def measure_loops(cls_model: LightningModule, kind: str, num_epochs: int = 10):
+    """Returns an array with the last loss from each epoch for each run.
+
+    Args:
+        cls_model: LightingModule to benchmark with.
+        kind: "PT Lightning" or "Vanilla PT".
+        num_epochs: number of epochs.
+    """
+    hist_losses = []
+    hist_durations = []
+    hist_memory = []
+
+    device_type = "cuda" if torch.cuda.is_available() else "cpu"
+    torch.backends.cudnn.deterministic = True
+
+    gc.collect()
+    if device_type == "cuda":
+        torch.cuda.empty_cache()
+        torch.cuda.reset_accumulated_memory_stats()
+        torch.cuda.reset_peak_memory_stats()
+    time.sleep(1)
+
+    time_start = time.perf_counter()
+
+    _loop = lightning_loop if kind == "PT Lightning" else vanilla_loop
+    final_loss, used_memory = _loop(cls_model, device_type=device_type, num_epochs=num_epochs)
+
+    time_end = time.perf_counter()
+
+    hist_losses.append(final_loss)
+    hist_durations.append(time_end - time_start)
+    hist_memory.append(used_memory)
+
+    return {"losses": hist_losses, "durations": hist_durations, "memory": hist_memory}
+
+
 class PyTorchParitySuite:
+    timeout = 600  # 10min in second
 
     def setup(self):
-        if not torch.cuda.is_available():
-            # skip this benchmark
-            raise NotImplementedError
-
-        # prepare datasets in setup
+        """asdf."""
+        # TODO: prepare datasets here
+        # if not torch.cuda.is_available():
+        #     # skip this benchmark
+        #     raise NotImplementedError
 
     # (ParityModuleRNN, 0.05, 0.001, 4, 3),
     # ParityModuleMNIST, 0.3, 0.001, 4, 3),  # todo: lower this thr
@@ -354,21 +356,30 @@ class PyTorchParitySuite:
 
     def time_lightning(self):
         cls_model = ParityModuleMNIST
-        num_epochs = 4
+        num_epochs = 1
         measure_loops(cls_model, kind="PT Lightning", num_epochs=num_epochs)
 
     def time_pytorch(self):
         cls_model = ParityModuleMNIST
-        num_epochs = 4
+        num_epochs = 1
         measure_loops(cls_model, kind="Vanilla PT", num_epochs=num_epochs)
-        # max_diff_speed: float,
-        # max_diff_memory: float,
-        # make sure the losses match exactly  to 5 decimal places
-        # print(f"Losses are for... \n vanilla: {vanilla['losses']} \n lightning: {lightning['losses']}")
-        # for pl_out, pt_out in zip(lightning["losses"], vanilla["losses"]):
-        #     np.testing.assert_almost_equal(pl_out, pt_out, 5)
-        # drop the first run for initialize dataset (download & filter)
-        # assert_parity_absolute(
-        #     lightning["durations"][1:], vanilla["durations"][1:], norm_by=num_epochs, max_diff=max_diff_speed
-        # )
-        # assert_parity_relative(lightning["memory"], vanilla["memory"], max_diff=max_diff_memory)
+
+    def track_mem_pytorch(self):
+        cls_model = ParityModuleMNIST
+        num_epochs = 1
+        output = measure_loops(cls_model, kind="Vanilla PT", num_epochs=num_epochs)
+        # {"losses": hist_losses, "durations": hist_durations, "memory": hist_memory}
+        return np.mean(output["memory"])
+
+
+# max_diff_speed: float,
+# max_diff_memory: float,
+# make sure the losses match exactly  to 5 decimal places
+# print(f"Losses are for... \n vanilla: {vanilla['losses']} \n lightning: {lightning['losses']}")
+# for pl_out, pt_out in zip(lightning["losses"], vanilla["losses"]):
+#     np.testing.assert_almost_equal(pl_out, pt_out, 5)
+# drop the first run for initialize dataset (download & filter)
+# assert_parity_absolute(
+#     lightning["durations"][1:], vanilla["durations"][1:], norm_by=num_epochs, max_diff=max_diff_speed
+# )
+# assert_parity_relative(lightning["memory"], vanilla["memory"], max_diff=max_diff_memory)
