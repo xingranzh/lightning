@@ -160,3 +160,5 @@ cifar-10-batches-py
 # ctags
 tags
 .tags
+
+.asv
