@@ -14,8 +14,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import models, transforms
 from torchvision.datasets import CIFAR10
 
-from pytorch_lightning.core.module import LightningModule
-from pytorch_lightning.trainer.trainer import Trainer
+from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.utilities.seed import seed_everything
 
 _PATH_DATASETS = "~/data/"
@@ -288,7 +287,6 @@ def lightning_loop(cls_model, device_type: str = "cuda", num_epochs=10):
     torch.backends.cudnn.deterministic = True
     model = cls_model()
     trainer = Trainer(
-        # as the first run is skipped, no need to run it long
         max_epochs=num_epochs,
         enable_progress_bar=False,
         enable_model_summary=False,
@@ -355,19 +353,21 @@ class PyTorchParitySuite:
     # params = ([ParityModuleMNIST], [4])
 
     def time_lightning(self):
-        cls_model = ParityModuleMNIST
-        num_epochs = 1
-        measure_loops(cls_model, kind="PT Lightning", num_epochs=num_epochs)
+        cls_model = ParityModuleMNIST  # TODO: add ParityModuleRNN and ParityModuleCIFAR
+        num_epochs = 1  # TODO: increase
+        print(measure_loops(cls_model, kind="PT Lightning", num_epochs=num_epochs))
+
 
     def time_pytorch(self):
-        cls_model = ParityModuleMNIST
-        num_epochs = 1
-        measure_loops(cls_model, kind="Vanilla PT", num_epochs=num_epochs)
+        cls_model = ParityModuleMNIST  # TODO: add ParityModuleRNN and ParityModuleCIFAR
+        num_epochs = 1  # TODO: increase
+        print(measure_loops(cls_model, kind="Vanilla PT", num_epochs=num_epochs))
 
     def track_mem_pytorch(self):
-        cls_model = ParityModuleMNIST
-        num_epochs = 1
+        cls_model = ParityModuleMNIST  # TODO: add ParityModuleRNN and ParityModuleCIFAR
+        num_epochs = 1  # TODO: increase
         output = measure_loops(cls_model, kind="Vanilla PT", num_epochs=num_epochs)
+        print(output)
         # {"losses": hist_losses, "durations": hist_durations, "memory": hist_memory}
         return np.mean(output["memory"])
 
