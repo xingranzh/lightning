@@ -4,7 +4,9 @@ on:
   push:
     branches: ["ci/decouple-testing"]  # FIXME
 
-concurrency: decouple-testing-full  # FIXME
+concurrency:  # FIXME
+  group: decouple-testing-full
+  cancel-in-progress: true
 
 jobs:
   full:
