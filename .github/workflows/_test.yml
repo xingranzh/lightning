@@ -97,19 +97,13 @@ jobs:
     - name: Install dependencies
       run: |
         flag=$(python -c "print('--pre' if '${{matrix.release}}' == 'pre' else '')" 2>&1)
-        url=$(python -c "print('test/cpu/torch_test.html' if '${{matrix.release}}' == 'pre' else 'cpu/torch_stable.html')" 2>&1)
-        pip install -r requirements.txt --upgrade $flag --find-links "https://download.pytorch.org/whl/${url}"
-        pip install -r requirements/test.txt --upgrade
+        url=https://download.pytorch.org/whl/$(python -c "print('test/cpu/torch_test.html' if '${{matrix.release}}' == 'pre' else 'cpu/torch_stable.html')" 2>&1)
+        pip install -U $flag --find-links $url \
+        -r requirements.txt \
+        -r requirements/test.txt \
+        -r requirements/extra.txt
         pip list
-      shell: bash
-
-    - name: Install extra dependencies
-      run: |
-        # adjust versions according installed Torch version
-        python ./requirements/adjust-versions.py requirements/extra.txt
-        python ./requirements/adjust-versions.py requirements/examples.txt
-        pip install --requirement ./requirements/extra.txt --find-links https://download.pytorch.org/whl/cpu/torch_stable.html --upgrade
-        pip list
+        pip list | grep torch  # FIXME
       shell: bash
 
     - name: Reinstall Horovod if necessary
