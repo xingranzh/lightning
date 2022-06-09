@@ -4,8 +4,22 @@ on:
   push:
     branches: ["ci/decouple-testing"]  # FIXME
 
+concurrency: decouple-testing-full  # FIXME
+
 jobs:
-  cpu:
+  full:
     # Supported keywords for jobs that call a reusable workflow:
     # https://docs.github.com/en/actions/using-workflows/reusing-workflows#supported-keywords-for-jobs-that-call-a-reusable-workflow
     uses: PyTorchLightning/pytorch-lightning/.github/workflows/_test.yml@ci/decouple-testing  # FIXME
+    with:
+      test-tag: 'full'
+      timeout-minutes: 40
+
+  example:
+    # Supported keywords for jobs that call a reusable workflow:
+    # https://docs.github.com/en/actions/using-workflows/reusing-workflows#supported-keywords-for-jobs-that-call-a-reusable-workflow
+    uses: PyTorchLightning/pytorch-lightning/.github/workflows/_test.yml@ci/decouple-testing  # FIXME
+    with:
+      test-tag: 'example'
+      test-dir: './pl_examples/'
+      timeout-minutes: 40

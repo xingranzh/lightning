@@ -5,7 +5,30 @@
 
 name: Test
 
-on: [workflow_call]
+on:
+  workflow_call:
+    inputs:
+      test-tag:
+        description: 'A string used to differenciate pytest results, codecov results, caches'
+        required: true
+        type: string
+      timeout-minutes:
+        description: 'jobs.<job_id>.timeout-minutes'
+        default: 40
+        required: false
+        type: number
+      # Note: Neither list nor dict is supported as inputs:
+      # https://github.com/github-community/community/discussions/11692
+      test-envs:
+        description: 'Environment variables to run tests with'
+        default: ''
+        required: false
+        type: string
+      test-dir:
+        description: 'Directories to run pytest on split with a space'
+        default: './tests/'
+        required: false
+        type: string
 
 jobs:
   cpu:
@@ -22,7 +45,7 @@ jobs:
         # include:
         #   - {os: ubuntu-20.04, python-version: "3.10", requires: "latest", release: "pre"}
 
-    timeout-minutes: 40
+    timeout-minutes: ${{ inputs.timeout-minutes }}
 
     steps:
 
@@ -84,6 +107,7 @@ jobs:
       run: |
         # adjust versions according installed Torch version
         python ./requirements/adjust-versions.py requirements/extra.txt
+        python ./requirements/adjust-versions.py requirements/examples.txt
         pip install --requirement ./requirements/extra.txt --find-links https://download.pytorch.org/whl/cpu/torch_stable.html --upgrade
         pip list
       shell: bash
@@ -115,43 +139,35 @@ jobs:
       run: |
         python requirements/check-avail-extras.py
 
-    - name: Run DocTests
-      run: coverage run --source pytorch_lightning -m pytest pytorch_lightning
-
-    - name: Run UnitTests
+    - name: Run tests
       run: |
         # NOTE: do not include coverage report here, see: https://github.com/nedbat/coveragepy/issues/1003
-        coverage run --source pytorch_lightning -m pytest pytorch_lightning tests -v --durations=50 --junitxml=junit/test-results-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.requires }}-${{ matrix.release }}.xml
+        ${{ inputs.test-envs }} python -m coverage run --source pytorch_lightning -m pytest ${{ inputs.test-dir }} -v --durations=0 --junitxml=junit/test-results-${{ inputs.test-tag }}-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.requires }}-${{ matrix.release }}.xml
+      shell: bash
 
-    - name: Examples
-      run: |
-        # adjust versions according to installed PyTorch version
-        python ./requirements/adjust-versions.py requirements/examples.txt
-        pip install -r requirements/examples.txt --find-links https://download.pytorch.org/whl/cpu/torch_stable.html --upgrade
-        python -m pytest pl_examples -v --durations=10
+    # FIXME: Enable uploading once ready
+    # - name: Upload pytest results
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: pytest-results-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.requires }}-${{ matrix.release }}
+    #     path: junit/test-results-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.requires }}-${{ matrix.release }}.xml
+    #     if-no-files-found: error
+    #   if: failure()
 
-    - name: Upload pytest results
-      uses: actions/upload-artifact@v2
-      with:
-        name: pytest-results-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.requires }}-${{ matrix.release }}
-        path: junit/test-results-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.requires }}-${{ matrix.release }}.xml
-        if-no-files-found: error
-      if: failure()
+    # - name: Statistics
+    #   if: success()
+    #   run: |
+    #     coverage report
+    #     coverage xml
 
-    - name: Statistics
-      if: success()
-      run: |
-        coverage report
-        coverage xml
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      if: always()
-      # see: https://github.com/actions/toolkit/issues/399
-      continue-on-error: true
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: coverage.xml
-        flags: cpu,pytest,python${{ matrix.python-version }}
-        name: CPU-coverage
-        fail_ci_if_error: false
+    # - name: Upload coverage to Codecov
+    #   uses: codecov/codecov-action@v1
+    #   if: always()
+    #   # see: https://github.com/actions/toolkit/issues/399
+    #   continue-on-error: true
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #     file: coverage.xml
+    #     flags: cpu,pytest,python${{ matrix.python-version }}
+    #     name: CPU-coverage
+    #     fail_ci_if_error: false
