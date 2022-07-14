@@ -23,17 +23,19 @@ local tputests = base.BaseTest {
       source ~/.bashrc
       conda activate lightning
       mkdir -p /home/runner/work/pytorch-lightning && cd /home/runner/work/pytorch-lightning
-      git clone https://github.com/PyTorchLightning/pytorch-lightning.git
-      cd pytorch-lightning
+      git clone https://github.com/Lightning-AI/lightning.git
+      cd lightning
       echo $PWD
       git ls-remote --refs origin
       git fetch origin "refs/pull/{PR_NUMBER}/head:pr/{PR_NUMBER}" && git checkout "pr/{PR_NUMBER}"
       git checkout {SHA}
+      export PACKAGE_NAME=pytorch
+      export FREEZE_REQUIREMENTS=1
       pip install -e .
       echo $KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS
       export XRT_TPU_CONFIG="tpu_worker;0;${KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS:7}"
       export PL_RUN_TPU_TESTS=1
-      coverage run --source=pytorch_lightning -m pytest -vv --durations=0 tests
+      coverage run --source=pytorch_lightning -m pytest -vv --durations=0 tests/tests_pytorch
       test_exit_code=$?
       echo "\n||| END PYTEST LOGS |||\n"
       coverage xml
