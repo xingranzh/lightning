@@ -14,7 +14,7 @@
 import os
 from copy import deepcopy
 from unittest import mock
-from unittest.mock import MagicMock, Mock, PropertyMock
+from unittest.mock import ANY, MagicMock, Mock, PropertyMock
 
 import pytest
 import torch
@@ -30,7 +30,7 @@ from pytorch_lightning.strategies import DeepSpeedStrategy, Strategy
 from pytorch_lightning.utilities import _StrategyType
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
 from pytorch_lightning.utilities.seed import pl_worker_init_function
-from tests.helpers.runif import RunIf
+from tests_pytorch.helpers.runif import RunIf
 
 
 class EmptyLite(LightningLite):
@@ -78,6 +78,18 @@ def test_run_input_output():
     assert result == "result"
     assert lite.run_args == (1, 2)
     assert lite.run_kwargs == {"three": 3}
+
+
+@mock.patch("pytorch_lightning.strategies.ddp.DistributedDataParallel")
+def test_setup_model(ddp_mock):
+    """Test that the setup method lets the strategy wrap the model, but keeps a reference to the original model."""
+    lite = EmptyLite(accelerator="cpu", strategy="ddp", devices=2)
+    model = nn.Linear(1, 2)
+    lite_model = lite.setup(model)
+    ddp_mock.assert_called_with(module=model, device_ids=ANY)
+    assert lite_model.module == model
+    assert lite_model.weight is model.weight
+    assert lite_model.forward != model.forward
 
 
 def test_setup_optimizers():
@@ -189,7 +201,7 @@ def test_setup_dataloaders_raises_for_unknown_custom_args():
     with pytest.raises(
         MisconfigurationException,
         match=(
-            r"Trying to inject `DistributedSampler` into the `CustomDataLoader` instance.*"
+            r"Trying to inject custom `Sampler` into the `CustomDataLoader` instance.*"
             r"The missing attributes are \['new_arg'\]"
         ),
     ):
@@ -300,9 +312,10 @@ def test_setup_dataloaders_replace_standard_sampler(shuffle, strategy):
 @pytest.mark.parametrize(
     "accelerator, expected",
     [
-        ("cpu", torch.device("cpu")),
-        pytest.param("gpu", torch.device("cuda", 0), marks=RunIf(min_gpus=1)),
-        pytest.param("tpu", torch.device("xla", 0), marks=RunIf(tpu=True)),
+        ("cpu", "cpu"),
+        pytest.param("gpu", "cuda:0", marks=RunIf(min_cuda_gpus=1)),
+        pytest.param("tpu", "xla:0", marks=RunIf(tpu=True)),
+        pytest.param("mps", "mps:0", marks=RunIf(mps=True)),
     ],
 )
 def test_to_device(accelerator, expected):
@@ -385,7 +398,7 @@ def test_autocast():
     lite._precision_plugin.forward_context().__exit__.assert_called()
 
 
-@RunIf(min_gpus=2, standalone=True, deepspeed=True)
+@RunIf(min_cuda_gpus=2, standalone=True, deepspeed=True)
 def test_deepspeed_multiple_models():
     class Lite(LightningLite):
         def run(self):
@@ -402,7 +415,7 @@ def test_deepspeed_multiple_models():
                 optimizer.step()
 
             for mw_b, mw_a in zip(state_dict.values(), model.state_dict().values()):
-                assert not torch.equal(mw_b, mw_a)
+                assert not torch.allclose(mw_b, mw_a)
 
             self.seed_everything(42)
             model_1 = BoringModel()
@@ -413,7 +426,7 @@ def test_deepspeed_multiple_models():
             optimizer_2 = torch.optim.SGD(model_2.parameters(), lr=0.0001)
 
             for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
-                assert torch.equal(mw_1, mw_2)
+                assert torch.allclose(mw_1, mw_2)
 
             model_1, optimizer_1 = self.setup(model_1, optimizer_1)
             model_2, optimizer_2 = self.setup(model_2, optimizer_2)
@@ -430,7 +443,7 @@ def test_deepspeed_multiple_models():
                 optimizer_1.step()
 
             for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
-                assert not torch.equal(mw_1, mw_2)
+                assert not torch.allclose(mw_1, mw_2)
 
             for data in data_list:
                 optimizer_2.zero_grad()
@@ -440,11 +453,11 @@ def test_deepspeed_multiple_models():
                 optimizer_2.step()
 
             for mw_1, mw_2 in zip(model_1.state_dict().values(), model_2.state_dict().values()):
-                assert torch.equal(mw_1, mw_2)
+                assert torch.allclose(mw_1, mw_2)
 
             # Verify collectives works as expected
             ranks = self.all_gather(torch.tensor([self.local_rank]).to(self.device))
-            assert torch.equal(ranks.cpu(), torch.tensor([[0], [1]]))
+            assert torch.allclose(ranks.cpu(), torch.tensor([[0], [1]]))
             assert self.broadcast(True)
             assert self.is_global_zero == (self.local_rank == 0)
 
