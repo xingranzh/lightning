@@ -24,7 +24,7 @@ import torch.distributed
 from pytorch_lightning.plugins.environments.lightning_environment import find_free_network_port
 from pytorch_lightning.trainer.connectors.signal_connector import SignalConnector
 from pytorch_lightning.utilities.imports import _IS_WINDOWS
-from tests_pytorch import _PATH_DATASETS
+from tests import _PATH_DATASETS
 
 
 @pytest.fixture(scope="session")
@@ -186,6 +186,14 @@ def pytest_collection_modifyitems(items):
             for marker in item.own_markers
             # has `@RunIf(slow=True)`
             if marker.name == "skipif" and marker.kwargs.get("slow")
+        ]
+    elif os.getenv("PL_RUN_TPU_TESTS", "0") == "1":
+        items[:] = [
+            item
+            for item in items
+            for marker in item.own_markers
+            # has `@RunIf(tpu=True)`
+            if marker.name == "skipif" and marker.kwargs.get("tpu")
         ]
     elif os.getenv("PL_RUN_IPU_TESTS", "0") == "1":
         items[:] = [
