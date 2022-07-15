@@ -49,6 +49,7 @@ class SerialLoaderBoringModel(BoringModel):
 
 
 @RunIf(tpu=True)
+@pl_multi_process_test
 def test_model_tpu_devices_1(tmpdir):
     """Make sure model trains on TPU."""
     tutils.reset_seed()
