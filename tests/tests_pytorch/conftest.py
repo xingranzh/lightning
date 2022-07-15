@@ -195,6 +195,11 @@ def pytest_collection_modifyitems(items):
             # has `@RunIf(tpu=True)`
             if marker.name == "skipif" and marker.kwargs.get("tpu")
         ]
+
+        # debug
+        for item in items:
+            print(f"{item.module.__name__}::{item.name}")
+
     elif os.getenv("PL_RUN_IPU_TESTS", "0") == "1":
         items[:] = [
             item
