@@ -314,7 +314,7 @@ def test_setup_dataloaders_replace_standard_sampler(shuffle, strategy):
     [
         ("cpu", "cpu"),
         pytest.param("gpu", "cuda:0", marks=RunIf(min_cuda_gpus=1)),
-        pytest.param("tpu", "xla:0", marks=RunIf(tpu=True)),
+        # pytest.param("tpu", "xla:0", marks=RunIf(tpu=True)),
         pytest.param("mps", "mps:0", marks=RunIf(mps=True)),
     ],
 )
