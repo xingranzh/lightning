@@ -26,7 +26,6 @@ from pytorch_lightning.strategies.ipu import IPUStrategy
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
 from tests_pytorch.helpers.datasets import RandomIterableDataset
 from tests_pytorch.helpers.runif import RunIf
-from tests_pytorch.helpers.utils import pl_multi_process_test
 
 
 def test_num_stepping_batches_basic():
