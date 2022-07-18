@@ -256,7 +256,7 @@ def test_exception_when_no_tpu_found():
 
 
 @pytest.mark.parametrize("tpu_cores", [1, 8, [1]])
-@RunIf(tpu=True)
+@RunIf(tpu=True, standalone=True)
 def test_accelerator_set_when_using_tpu(tpu_cores):
     """Test if the accelerator is set to `tpu` when tpu_cores is not None."""
     assert isinstance(Trainer(accelerator="tpu", devices=tpu_cores).accelerator, TPUAccelerator)
@@ -436,7 +436,7 @@ def test_tpu_host_world_size(tmpdir):
 
 
 @RunIf(tpu=True)
-def test_device_type_when_training_plugin_tpu_passed(tmpdir):
+def test_device_type_when_tpu_strategy_passed(tmpdir):
     trainer = Trainer(default_root_dir=tmpdir, strategy=TPUSpawnStrategy(), accelerator="tpu", devices=8)
     assert isinstance(trainer.strategy, TPUSpawnStrategy)
     assert isinstance(trainer.accelerator, TPUAccelerator)
