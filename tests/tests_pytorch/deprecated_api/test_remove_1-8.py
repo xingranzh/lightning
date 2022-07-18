@@ -359,7 +359,7 @@ def test_v1_8_0_deprecated_single_device_plugin_class():
         SingleDevicePlugin("cpu")
 
 
-@RunIf(tpu=True)
+@RunIf(tpu=True, standalone=True)
 def test_v1_8_0_deprecated_single_tpu_plugin_class():
     with pytest.deprecated_call(
         match=("SingleTPUPlugin` is deprecated in v1.6 and will be removed in v1.8. Use `.*SingleTPUStrategy` instead.")
