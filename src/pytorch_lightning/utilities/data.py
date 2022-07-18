@@ -138,7 +138,8 @@ def has_len_all_ranks(
         device = model.device
         total_length = total_length.to(device)
         total_length = training_type.reduce(total_length, reduce_op="sum")
-        total_length = total_length.cpu().item()
+        total_length = total_length.cpu()
+        total_length = total_length.item()
         total_length = int(total_length)
 
         if total_length == 0:
