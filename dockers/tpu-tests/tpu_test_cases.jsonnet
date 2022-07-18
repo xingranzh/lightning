@@ -35,11 +35,13 @@ local tputests = base.BaseTest {
       echo $KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS
       export XRT_TPU_CONFIG="tpu_worker;0;${KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS:7}"
       export PL_RUN_TPU_TESTS=1
-      coverage run --source=pytorch_lightning -m pytest -vv --durations=0 tests/tests_pytorch
+      cd tests/tests_pytorch
+      coverage run --source=pytorch_lightning -m pytest -vv --durations=0 ./
+      echo "\n||| Running standalone tests |||\n"
+      bash run_standalone_tests.sh
       test_exit_code=$?
       echo "\n||| END PYTEST LOGS |||\n"
       coverage xml
-      cat coverage.xml | tr -d '\t'
       test $test_exit_code -eq 0
     |||
   ),

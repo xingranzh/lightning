@@ -46,8 +46,7 @@ class WeightSharingModule(BoringModel):
         return x
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_resume_training_on_cpu(tmpdir):
     """Checks if training can be resumed from a saved checkpoint on CPU."""
     # Train a model on TPU

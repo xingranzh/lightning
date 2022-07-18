@@ -68,8 +68,7 @@ def test_model_tpu_devices_1(tmpdir):
 
 
 @pytest.mark.parametrize("tpu_core", [1, 5])
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_model_tpu_index(tmpdir, tpu_core):
     """Make sure model trains on TPU."""
     tutils.reset_seed()
@@ -129,8 +128,7 @@ def test_model_16bit_tpu_devices_1(tmpdir):
 
 
 @pytest.mark.parametrize("tpu_core", [1, 5])
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_model_16bit_tpu_index(tmpdir, tpu_core):
     """Make sure model trains on TPU."""
     tutils.reset_seed()
@@ -151,7 +149,6 @@ def test_model_16bit_tpu_index(tmpdir, tpu_core):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_model_16bit_tpu_devices_8(tmpdir):
     """Make sure model trains on TPU."""
     tutils.reset_seed()
@@ -310,7 +307,6 @@ def test_tpu_cores_with_argparse(cli_args, expected):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_tpu_reduce():
     """Test tpu spawn reduce operation."""
 
