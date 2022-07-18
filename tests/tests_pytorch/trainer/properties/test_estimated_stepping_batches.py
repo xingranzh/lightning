@@ -136,10 +136,9 @@ def test_num_stepping_batches_gpu(trainer_kwargs, estimated_steps, monkeypatch):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 @pytest.mark.parametrize("devices,estimated_steps", [([1], 64), (8, 8)])
 def test_num_stepping_batches_with_tpu(devices, estimated_steps):
-    """Test stepping batches with TPU training which acts like DDP."""
+    """Test stepping batches with the TPU strategy."""
     trainer = Trainer(accelerator="tpu", devices=devices, max_epochs=1)
     model = BoringModel()
     trainer._data_connector.attach_data(model)
