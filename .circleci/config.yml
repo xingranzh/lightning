@@ -105,9 +105,9 @@ references:
      command: |
        mv ./xx01 coverage.xml
        # TODO: add human readable report
-       cat coverage.xml
-       sudo pip install pycobertura
-       pycobertura show coverage.xml
+       # cat coverage.xml
+       # sudo pip install pycobertura
+       # pycobertura show coverage.xml
 
 jobs:
 
