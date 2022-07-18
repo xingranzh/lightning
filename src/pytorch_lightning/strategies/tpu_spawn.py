@@ -73,9 +73,12 @@ class TPUSpawnStrategy(DDPSpawnStrategy):
         )
         self.debug = debug
         self.start_method = "fork"
+        self._spawned = False
 
     @property
     def root_device(self) -> torch.device:
+        if not self._spawned:
+            raise RuntimeError("Trying to access the XLA device before processes get spawned is not allowed")
         return xm.xla_device()
 
     @staticmethod
@@ -194,6 +197,7 @@ class TPUSpawnStrategy(DDPSpawnStrategy):
         return output
 
     def _worker_setup(self, process_idx: int):
+        self._spawned = True
         reset_seed()
         self.set_world_ranks(process_idx)
         rank_zero_only.rank = self.global_rank
