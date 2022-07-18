@@ -134,7 +134,12 @@ def has_len_all_ranks(
     infinite dataloader."""
     try:
         local_length = len(dataloader)
-        total_length = int(training_type.reduce(torch.tensor(local_length).to(model.device), reduce_op="sum"))
+        total_length = torch.tensor(local_length)
+        device = model.device
+        total_length = total_length.to(device)
+        total_length = training_type.reduce(total_length, reduce_op="sum")
+        total_length = total_length.item()
+        total_length = int(total_length)
 
         if total_length == 0:
             rank_zero_warn(
