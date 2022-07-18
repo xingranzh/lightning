@@ -28,7 +28,6 @@ from pytorch_lightning.plugins import PrecisionPlugin, TPUPrecisionPlugin, XLACh
 from pytorch_lightning.strategies import DDPStrategy, TPUSpawnStrategy
 from pytorch_lightning.utilities import find_shared_parameters
 from tests_pytorch.helpers.runif import RunIf
-from tests_pytorch.helpers.utils import pl_multi_process_test
 
 
 class WeightSharingModule(BoringModel):
@@ -68,7 +67,6 @@ def test_resume_training_on_cpu(tmpdir):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_if_test_works_after_train(tmpdir):
     """Ensure that .test() works after .fit()"""
 
@@ -306,8 +304,7 @@ def test_warning_if_tpus_not_used():
         Trainer()
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 @pytest.mark.parametrize(
     ["devices", "expected_device_ids"],
     [

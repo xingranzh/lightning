@@ -80,41 +80,6 @@ def init_checkpoint_callback(logger):
     return checkpoint
 
 
-def pl_multi_process_test(func):
-    """Wrapper for running multi-processing tests_pytorch."""
-    return func
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-
-        from multiprocessing import Process, Queue
-
-        queue = Queue()
-
-        def inner_f(queue, **kwargs):
-            try:
-                func(**kwargs)
-                queue.put(1)
-            except Exception:
-                _trace = traceback.format_exc()
-                print(_trace)
-                # code 17 means RuntimeError: tensorflow/compiler/xla/xla_client/mesh_service.cc:364 :
-                # Failed to meet rendezvous 'torch_xla.core.xla_model.save': Socket closed (14)
-                if "terminated with exit code 17" in _trace:
-                    queue.put(1)
-                else:
-                    queue.put(-1)
-
-        proc = Process(target=inner_f, args=(queue,), kwargs=kwargs)
-        proc.start()
-        proc.join()
-
-        result = queue.get()
-        assert result == 1, "expected 1, but returned %s" % result
-
-    return wrapper
-
-
 @contextmanager
 def no_warning_call(expected_warning: Type[Warning] = UserWarning, match: Optional[str] = None):
     with pytest.warns(None) as record:

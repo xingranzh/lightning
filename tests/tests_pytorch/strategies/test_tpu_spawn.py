@@ -25,7 +25,6 @@ from pytorch_lightning.strategies import TPUSpawnStrategy
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
 from tests_pytorch.helpers.dataloaders import CustomNotImplementedErrorDataloader
 from tests_pytorch.helpers.runif import RunIf
-from tests_pytorch.helpers.utils import pl_multi_process_test
 
 
 class BoringModelNoDataloaders(BoringModel):
@@ -89,8 +88,7 @@ class BoringModelTPU(BoringModel):
         assert os.environ.get("PT_XLA_DEBUG") == "1"
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_model_tpu_one_core():
     """Tests if device/debug flag is set correctly when training and after teardown for TPUSpawnStrategy."""
     trainer = Trainer(accelerator="tpu", devices=1, fast_dev_run=True, strategy=TPUSpawnStrategy(debug=True))

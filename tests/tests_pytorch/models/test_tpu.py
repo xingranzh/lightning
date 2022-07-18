@@ -31,7 +31,6 @@ from pytorch_lightning.utilities import _TPU_AVAILABLE
 from pytorch_lightning.utilities.distributed import ReduceOp
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
 from tests_pytorch.helpers.runif import RunIf
-from tests_pytorch.helpers.utils import pl_multi_process_test
 
 if _TPU_AVAILABLE:
     import torch_xla
@@ -48,8 +47,7 @@ class SerialLoaderBoringModel(BoringModel):
         return DataLoader(RandomDataset(32, 2000), batch_size=32)
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_model_tpu_devices_1(tmpdir):
     """Make sure model trains on TPU."""
     tutils.reset_seed()
@@ -88,7 +86,6 @@ def test_model_tpu_index(tmpdir, tpu_core):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_model_tpu_devices_8(tmpdir):
     """Make sure model trains on TPU."""
     tutils.reset_seed()
@@ -107,8 +104,7 @@ def test_model_tpu_devices_8(tmpdir):
     tpipes.run_model_test(trainer_options, model, with_hpc=False, min_acc=0.05)
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_model_16bit_tpu_devices_1(tmpdir):
     """Make sure model trains on TPU."""
     tutils.reset_seed()
@@ -169,7 +165,6 @@ def test_model_16bit_tpu_devices_8(tmpdir):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_model_tpu_early_stop(tmpdir):
     """Test if single TPU core training works."""
 
@@ -195,8 +190,7 @@ def test_model_tpu_early_stop(tmpdir):
     trainer.test(dataloaders=DataLoader(RandomDataset(32, 2000), batch_size=32))
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_tpu_grad_norm(tmpdir):
     """Test if grad_norm works on TPU."""
     tutils.reset_seed()
@@ -215,8 +209,7 @@ def test_tpu_grad_norm(tmpdir):
     tpipes.run_model_test(trainer_options, model, with_hpc=False)
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_tpu_clip_grad_by_value(tmpdir):
     """Test if clip_gradients by value works on TPU."""
     tutils.reset_seed()
@@ -237,7 +230,6 @@ def test_tpu_clip_grad_by_value(tmpdir):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_dataloaders_passed_to_fit(tmpdir):
     """Test if dataloaders passed to trainer works on TPU."""
     tutils.reset_seed()
@@ -271,7 +263,6 @@ def test_accelerator_set_when_using_tpu(tpu_cores):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_broadcast_on_tpu():
     """Checks if an object from the main process is broadcasted to other processes correctly."""
 
@@ -290,8 +281,7 @@ def test_broadcast_on_tpu():
     ["cli_args", "expected"],
     [("--tpu_cores=8", {"tpu_cores": 8}), ("--tpu_cores=1,", {"tpu_cores": "1,"})],
 )
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 def test_tpu_cores_with_argparse(cli_args, expected):
     """Test passing tpu_cores in command line."""
     cli_args = cli_args.split(" ") if cli_args else []
@@ -325,11 +315,13 @@ def test_tpu_reduce():
             else:
                 assert result.item() == 8
 
+    import torch_xla.core.xla_model as xm
+    print(xm.get_xla_supported_devices("TPU"))
+    assert len(xm.get_xla_supported_devices("TPU")) == 8
     xmp.spawn(test_reduce, nprocs=8, start_method="fork")
 
 
-@RunIf(tpu=True)
-@pl_multi_process_test
+@RunIf(tpu=True, standalone=True)
 @pytest.mark.parametrize("clip_val", [10])
 @mock.patch("torch.nn.utils.clip_grad_norm_")
 def test_tpu_precision_16_clip_gradients(mock_clip_grad_norm, clip_val, tmpdir):
@@ -359,7 +351,6 @@ def test_tpu_precision_16_clip_gradients(mock_clip_grad_norm, clip_val, tmpdir):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_if_test_works_with_checkpoint_false(tmpdir):
     """Ensure that model trains properly when `enable_checkpointing` is set to False."""
 
@@ -378,7 +369,6 @@ def test_if_test_works_with_checkpoint_false(tmpdir):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_tpu_sync_dist():
     """Test tpu spawn sync dist operation."""
 
@@ -392,7 +382,6 @@ def test_tpu_sync_dist():
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_tpu_debug_mode(tmpdir):
     """Test if debug mode works on TPU."""
 
@@ -420,7 +409,6 @@ def test_tpu_debug_mode(tmpdir):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_tpu_host_world_size(tmpdir):
     """Test Host World size env setup on TPU."""
 
@@ -447,8 +435,7 @@ def test_tpu_host_world_size(tmpdir):
 
 
 @RunIf(tpu=True)
-@pl_multi_process_test
 def test_device_type_when_training_plugin_tpu_passed(tmpdir):
-    trainer = Trainer(strategy=TPUSpawnStrategy(), accelerator="tpu", devices=8)
+    trainer = Trainer(default_root_dir=tmpdir, strategy=TPUSpawnStrategy(), accelerator="tpu", devices=8)
     assert isinstance(trainer.strategy, TPUSpawnStrategy)
     assert isinstance(trainer.accelerator, TPUAccelerator)
