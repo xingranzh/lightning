@@ -37,21 +37,6 @@ if _TPU_AVAILABLE:
     import torch_xla.distributed.xla_multiprocessing as xmp
 
 
-@RunIf(tpu=True)
-def test_broadcast_on_tpu():
-    """Checks if an object from the main process is broadcasted to other processes correctly."""
-
-    def test_broadcast(rank):
-        trainer = Trainer(accelerator="tpu", devices=8)
-        assert isinstance(trainer.accelerator, TPUAccelerator)
-        assert isinstance(trainer.strategy, TPUSpawnStrategy)
-        obj = ("ver_0.5", "logger_name", rank)
-        result = trainer.strategy.broadcast(obj)
-        assert result == ("ver_0.5", "logger_name", 0)
-
-    xmp.spawn(test_broadcast, nprocs=8, start_method="fork")
-
-
 class SerialLoaderBoringModel(BoringModel):
     def train_dataloader(self):
         return DataLoader(RandomDataset(32, 2000), batch_size=32)

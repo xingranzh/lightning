@@ -300,6 +300,26 @@ def test_mp_device_dataloader_attribute(root_device_mock, mp_loader_mock):
     assert processed_dataloader.dataset == processed_dataloader._loader.dataset
 
 
+from pytorch_lightning.utilities import _TPU_AVAILABLE
+if _TPU_AVAILABLE:
+    import torch_xla
+    import torch_xla.distributed.xla_multiprocessing as xmp
+
+
+@RunIf(tpu=True)
+def test_broadcast_on_tpu():
+    """Checks if an object from the main process is broadcasted to other processes correctly."""
+
+    def test_broadcast(rank):
+        trainer = Trainer(accelerator="tpu", devices=8)
+        assert isinstance(trainer.accelerator, TPUAccelerator)
+        assert isinstance(trainer.strategy, TPUSpawnStrategy)
+        obj = ("ver_0.5", "logger_name", rank)
+        result = trainer.strategy.broadcast(obj)
+        assert result == ("ver_0.5", "logger_name", 0)
+
+    xmp.spawn(test_broadcast, nprocs=8, start_method="fork")
+
 @RunIf(tpu=True)
 def test_warning_if_tpus_not_used():
     with pytest.warns(UserWarning, match="TPU available but not used. Set `accelerator` and `devices`"):
