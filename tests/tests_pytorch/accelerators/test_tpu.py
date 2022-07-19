@@ -301,6 +301,7 @@ def test_mp_device_dataloader_attribute(root_device_mock, mp_loader_mock):
 
 
 from pytorch_lightning.utilities import _TPU_AVAILABLE
+
 if _TPU_AVAILABLE:
     import torch_xla
     import torch_xla.distributed.xla_multiprocessing as xmp
@@ -319,6 +320,7 @@ def test_broadcast_on_tpu():
         assert result == ("ver_0.5", "logger_name", 0)
 
     xmp.spawn(test_broadcast, nprocs=8, start_method="fork")
+
 
 @RunIf(tpu=True)
 def test_warning_if_tpus_not_used():
