@@ -31,7 +31,7 @@ from pytorch_lightning.utilities.rank_zero import rank_zero_debug
 from pytorch_lightning.utilities.types import _PATH
 
 
-class _SpawnLauncher(_Launcher):
+class _MultiProcessingLauncher(_Launcher):
     r"""Spawns processes that run a given function in parallel, and joins them all at the end.
 
     The main process in which this launcher is invoked creates N so-called worker processes (using
@@ -96,12 +96,12 @@ class _SpawnLauncher(_Launcher):
             nprocs=self._strategy.num_processes,
             start_method=self._start_method,
         )
-        spawn_output = return_queue.get()
+        worker_output = return_queue.get()
         if trainer is None:
-            return spawn_output
+            return worker_output
 
-        self._recover_results_in_main_process(spawn_output, trainer)
-        return spawn_output.trainer_results
+        self._recover_results_in_main_process(worker_output, trainer)
+        return worker_output.trainer_results
 
     def _wrapping_function(
         self,
@@ -121,25 +121,25 @@ class _SpawnLauncher(_Launcher):
         if self._strategy.local_rank == 0:
             return_queue.put(move_data_to_device(results, "cpu"))
 
-    def _recover_results_in_main_process(self, spawn_output: "_SpawnOutput", trainer: "pl.Trainer") -> None:
+    def _recover_results_in_main_process(self, worker_output: "_WorkerOutput", trainer: "pl.Trainer") -> None:
         # transfer back the best path to the trainer
         if trainer.checkpoint_callback and hasattr(trainer.checkpoint_callback, "best_model_path"):
-            trainer.checkpoint_callback.best_model_path = str(spawn_output.best_model_path)
+            trainer.checkpoint_callback.best_model_path = str(worker_output.best_model_path)
 
         # TODO: pass also best score
         # load last weights
-        if spawn_output.weights_path is not None:
-            ckpt = self._strategy.checkpoint_io.load_checkpoint(spawn_output.weights_path)
+        if worker_output.weights_path is not None:
+            ckpt = self._strategy.checkpoint_io.load_checkpoint(worker_output.weights_path)
             trainer.lightning_module.load_state_dict(ckpt)  # type: ignore[arg-type]
-            self._strategy.checkpoint_io.remove_checkpoint(spawn_output.weights_path)
+            self._strategy.checkpoint_io.remove_checkpoint(worker_output.weights_path)
 
-        trainer.state = spawn_output.trainer_state
+        trainer.state = worker_output.trainer_state
 
         # get the `callback_metrics` and set it to the trainer
-        self.get_from_queue(trainer, spawn_output.extra)
+        self.get_from_queue(trainer, worker_output.extra)
 
-    def _collect_rank_zero_results(self, trainer: "pl.Trainer", results: Any) -> Optional["_SpawnOutput"]:
-        rank_zero_debug("Finalizing the DDP spawn environment.")
+    def _collect_rank_zero_results(self, trainer: "pl.Trainer", results: Any) -> Optional["_WorkerOutput"]:
+        rank_zero_debug("Collecting results from rank 0 process.")
         checkpoint_callback = trainer.checkpoint_callback
         best_model_path = (
             checkpoint_callback.best_model_path
@@ -163,7 +163,7 @@ class _SpawnLauncher(_Launcher):
         extra = _FakeQueue()
         self.add_to_queue(trainer, extra)
 
-        return _SpawnOutput(best_model_path, weights_path, trainer.state, results, extra)
+        return _WorkerOutput(best_model_path, weights_path, trainer.state, results, extra)
 
     def add_to_queue(self, trainer: "pl.Trainer", queue: "_FakeQueue") -> None:
         """Appends the :attr:`trainer.callback_metrics` dictionary to the given queue. To avoid issues with memory
@@ -204,7 +204,7 @@ class _FakeQueue(UserList):
         return len(self) == 0
 
 
-class _SpawnOutput(NamedTuple):
+class _WorkerOutput(NamedTuple):
     best_model_path: Optional[_PATH]
     weights_path: Optional[_PATH]
     trainer_state: TrainerState
