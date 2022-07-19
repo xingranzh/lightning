@@ -312,10 +312,6 @@ def test_tpu_reduce():
             else:
                 assert result.item() == 8
 
-    import torch_xla.core.xla_model as xm
-
-    print(xm.get_xla_supported_devices("TPU"))
-    assert len(xm.get_xla_supported_devices("TPU")) == 8
     xmp.spawn(test_reduce, nprocs=8, start_method="fork")
 
 
