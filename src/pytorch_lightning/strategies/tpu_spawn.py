@@ -78,7 +78,7 @@ class TPUSpawnStrategy(DDPSpawnStrategy):
     @property
     def root_device(self) -> torch.device:
         if not self._spawned:
-            raise RuntimeError("Trying to access the XLA device before processes get spawned is not allowed")
+            raise RuntimeError("Accessing the XLA device before processes have spawned is not allowed.")
         return xm.xla_device()
 
     @staticmethod

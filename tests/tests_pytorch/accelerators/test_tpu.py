@@ -290,12 +290,14 @@ def test_xla_checkpoint_plugin_being_default():
     assert isinstance(trainer.strategy.checkpoint_io, XLACheckpointIO)
 
 
-@RunIf(tpu=True)
-@patch("pytorch_lightning.strategies.tpu_spawn.xm")
-def test_mp_device_dataloader_attribute(_):
+@patch("pytorch_lightning.strategies.tpu_spawn.MpDeviceLoader")
+@patch("pytorch_lightning.strategies.tpu_spawn.TPUSpawnStrategy.root_device")
+def test_mp_device_dataloader_attribute(root_device_mock, mp_loader_mock):
     dataset = RandomDataset(32, 64)
-    dataloader = TPUSpawnStrategy().process_dataloader(DataLoader(dataset))
-    assert dataloader.dataset == dataset
+    dataloader = DataLoader(dataset)
+    processed_dataloader = TPUSpawnStrategy().process_dataloader(dataloader)
+    mp_loader_mock.assert_called_with(dataloader, root_device_mock)
+    assert processed_dataloader.dataset == processed_dataloader._loader.dataset
 
 
 @RunIf(tpu=True)
