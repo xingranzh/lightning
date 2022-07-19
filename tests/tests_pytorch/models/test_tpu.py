@@ -36,8 +36,6 @@ if _TPU_AVAILABLE:
     import torch_xla
     import torch_xla.distributed.xla_multiprocessing as xmp
 
-    SERIAL_EXEC = xmp.MpSerialExecutor()
-
 
 class SerialLoaderBoringModel(BoringModel):
     def train_dataloader(self):
@@ -237,7 +235,6 @@ def test_dataloaders_passed_to_fit(tmpdir):
 
     trainer = Trainer(default_root_dir=tmpdir, max_epochs=1, accelerator="tpu", devices=8)
     trainer.fit(model, train_dataloaders=model.train_dataloader(), val_dataloaders=model.val_dataloader())
-    assert trainer.state.finished, f"Training failed with {trainer.state}"
 
 
 @RunIf(tpu=True)
